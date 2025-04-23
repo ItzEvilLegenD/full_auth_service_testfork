@@ -83,6 +83,6 @@ async def get_all_users(request: Request):
 
     
 
-if __name__ == "__main_back__":
+if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run("main_back:app", host="0.0.0.0", port=8000, reload=True)
