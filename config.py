@@ -1,4 +1,4 @@
-from authx import AuthX, AuthXConfig
+from authx import AuthXConfig
 
 
 
