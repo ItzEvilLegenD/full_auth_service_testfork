@@ -5,9 +5,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # импорты из файлов
-from routes_8000 import router as router_8000
+from auth_folder.routes_8000 import router as router_8000
 from routers.routes_8001 import router as router_8001
-from middleware_auth import AuthMiddleware
+from auth_folder.middleware_auth import AuthMiddleware
 
 app_8000 = FastAPI()
 app_8001 = FastAPI()

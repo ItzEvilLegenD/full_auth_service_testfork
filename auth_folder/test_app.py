@@ -5,8 +5,8 @@ import hashlib
 import pytest
 
 
-from middleware_auth import redis_client
-from main_auth import app1
+from auth_folder.middleware_auth import redis_client
+from auth_folder.main_auth import app1
 
 
 client = TestClient(app1)
