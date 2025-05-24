@@ -1,10 +1,19 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 import httpx  # Для запросов к Postgres
 from pydantic import BaseModel, EmailStr
+from typing import Optional
+import logging
+
+# Настройка логгирования
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 app = FastAPI()
 
-# Конфигурация
+# Прописать exception errors например httpx.ConnectError: All connection attempts failed
+
+# Конфигурация (в docker работать не будет, нужен файл с конфигурацией .env)
 POSTGRES_SERVICE_URL = "http://localhost:8003"  # URL Postgres-сервиса
 
 # Модель данных
@@ -17,71 +26,121 @@ class UserCreate(BaseModel):
     username: str
     hashed_password: str
 
-# получение x-username и x-user-hashed-password
-def verify_auth(request: Request):
-    # Получает значения заголовков из HTTP-запроса
-    x_username = request.headers.get("x-username")
-    x_password = request.headers.get("x-user-hashed-password")
-    # if not (x_username and x_password):
-    #    raise HTTPException(status_code=401, detail="Missing authentication headers")
-    return {"username": x_username, "hashed_password": x_password}
+class ErrorResponse(BaseModel):
+    detail: str
+    error_type: Optional[str] = None
+
+# Обработчик ошибок подключения
+async def handle_postgres_request(method: str, url: str, **kwargs):
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await getattr(client, method)(url, **kwargs)
+            response.raise_for_status()
+            return response
+            
+    except httpx.ConnectError as e:
+        logger.error(f"Connection error to Postgres service: {e}")
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "Postgres service unavailable",
+                "type": "connection_error"
+            }
+        )
+    except httpx.HTTPStatusError as e:
+        logger.error(f"Postgres service error: {e}")
+        raise HTTPException(
+            status_code=e.response.status_code,
+            detail={
+                "error": f"Postgres service returned error: {str(e)}",
+                "type": "http_error"
+            }
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "Internal server error",
+                "type": "unexpected_error"
+            }
+        )
 
 # Маршруты
-@app.post("/add_user")
-async def add_user(user_data: UserCreate, request: Request):
-    # Получить словарь или ошибку
-    auth = verify_auth(request) # Ничего не делает
-    
-    # Переадресация запроса к Postgres (8003)
-    async with httpx.AsyncClient() as client:
-        postgres_response = await client.post(
-            f"{POSTGRES_SERVICE_URL}/add_user", # Куда отправлять запрос
-            json=user_data.dict(),# конвертирует Pydantic-модель в словарь (тело запроса)
+@app.post("/add_user", response_model=UserCreate, responses={
+    503: {"model": ErrorResponse, "description": "Service unavailable"},
+    500: {"model": ErrorResponse, "description": "Internal server error"}
+})
+async def add_user(user_data: UserCreate):
+    try:
+        postgres_response = await handle_postgres_request(
+            "post",
+            f"{POSTGRES_SERVICE_URL}/add_user",
+            json=user_data.dict()
         )
-    
-    # Вернуть ответ клиенту
-    return JSONResponse(content=postgres_response.json(), status_code=postgres_response.status_code)
+        return JSONResponse(content=postgres_response.json(), status_code=postgres_response.status_code)
+        
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        logger.exception("Unexpected error in add_user")
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/delete_user/{user_id}")
-async def delete_user(user_id: int, request: Request):
-
-    auth = verify_auth(request)
-    
-    async with httpx.AsyncClient() as client:
-        postgres_response = await client.delete(
-            f"{POSTGRES_SERVICE_URL}/delete_user/{user_id}",
+@app.delete("/delete_user/{user_id}", responses={
+    503: {"model": ErrorResponse, "description": "Service unavailable"},
+    404: {"model": ErrorResponse, "description": "User not found"},
+    500: {"model": ErrorResponse, "description": "Internal server error"}
+})
+async def delete_user(user_id: int):
+    try:
+        postgres_response = await handle_postgres_request(
+            "delete",
+            f"{POSTGRES_SERVICE_URL}/delete_user/{user_id}"
         )
-    
+        return JSONResponse(content=postgres_response.json(), status_code=postgres_response.status_code)
+        
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        logger.exception("Unexpected error in delete_user")
+        raise HTTPException(status_code=500, detail=str(e))
 
-    return JSONResponse(content=postgres_response.json(), status_code=postgres_response.status_code)
-
-@app.get("/get_user/{user_id}")
-async def get_all_users(user_id: int, request: Request):
-
-    auth = verify_auth(request)
-    
-    async with httpx.AsyncClient() as client:
-        postgres_response = await client.get(
-            f"{POSTGRES_SERVICE_URL}/get_user/{user_id}",
+@app.get("/get_user/{user_id}", responses={
+    503: {"model": ErrorResponse, "description": "Service unavailable"},
+    404: {"model": ErrorResponse, "description": "User not found"},
+    500: {"model": ErrorResponse, "description": "Internal server error"}
+})
+async def get_user(user_id: int):
+    try:
+        postgres_response = await handle_postgres_request(
+            "get",
+            f"{POSTGRES_SERVICE_URL}/get_user/{user_id}"
         )
+        return JSONResponse(content=postgres_response.json(), status_code=postgres_response.status_code)
+        
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        logger.exception("Unexpected error in get_user")
+        raise HTTPException(status_code=500, detail=str(e))
 
-    # возможно, JSONResponse некорректно обработает результат, если получен список
-    return JSONResponse(content=postgres_response.json(), status_code=postgres_response.status_code)
-
-@app.get("/get_all_users")
-async def get_all_users(request: Request):
-
-    auth = verify_auth(request)
-    
-    async with httpx.AsyncClient() as client:
-        postgres_response = await client.get(
-            f"{POSTGRES_SERVICE_URL}/get_all_users",
+@app.get("/get_all_users", responses={
+    503: {"model": ErrorResponse, "description": "Service unavailable"},
+    500: {"model": ErrorResponse, "description": "Internal server error"}
+})
+async def get_all_users():
+    try:
+        postgres_response = await handle_postgres_request(
+            "get",
+            f"{POSTGRES_SERVICE_URL}/get_all_users"
         )
-
-    # возможно, JSONResponse некорректно обработает результат, если получен список
-    return JSONResponse(content=postgres_response.json(), status_code=postgres_response.status_code)
-
-    
+        return JSONResponse(content=postgres_response.json(), status_code=postgres_response.status_code)
+        
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        logger.exception("Unexpected error in get_all_users")
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
