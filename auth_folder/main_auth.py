@@ -5,12 +5,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # импорты из файлов
-from auth_folder.routes_8000 import router as router_8000
+from routes_8000 import router as router_8000
 from routers.routes_8001 import router as router_8001
-from auth_folder.middleware_auth import AuthMiddleware
+from middleware_auth import AuthMiddleware
 
-app_8000 = FastAPI()
-app_8001 = FastAPI()
+# app_8000 = FastAPI()
+app = FastAPI()
 
 # origins = [
 #        "http://localhost:8001/",
@@ -18,23 +18,23 @@ app_8001 = FastAPI()
 #        "http://127.0.0.1:8000/",
 #        "http://127.0.0.1:8001/",
 #        ]
-app_8000.include_router(router_8000)
-app_8001.include_router(router_8001)
+# app_8000.include_router(router_8000)
+app.include_router(router_8001)
 
-app_8001.add_middleware(CORSMiddleware,
+app.add_middleware(CORSMiddleware,
                    allow_origins=["*"],
                    allow_credentials=True,
                    allow_methods=["*"], 
                    allow_headers=["*"],  
                    )
-app_8000.add_middleware(CORSMiddleware,
-                   allow_origins=["*"],
-                   allow_credentials=True,
-                   allow_methods=["*"], 
-                   allow_headers=["*"],  
-                   )
+# app_8000.add_middleware(CORSMiddleware,
+#                    allow_origins=["*"],
+#                    allow_credentials=True,
+#                    allow_methods=["*"], 
+#                    allow_headers=["*"],  
+#                    )
 
-app_8001.add_middleware(AuthMiddleware)
+app.add_middleware(AuthMiddleware)
 
 
     
@@ -46,8 +46,8 @@ async def run_server(app, port):
 
 async def main():
     await asyncio.gather(
-        run_server(app_8000, 8000),
-        run_server(app_8001, 8001),
+        # run_server(app_8000, 8000),
+        run_server(app, 8001),
     )
 # запуск
 

@@ -1,16 +1,19 @@
 from fastapi import APIRouter
-from fastapi.responses import RedirectResponse
-from models.user import User
 from dependencies.auth_depends import authenticate_user, register_user
-import json
 from pydantic import BaseModel
 import webbrowser
+from typing import Optional
 
 router = APIRouter()
 
 class LoginRequest(BaseModel):
+    user_id: int
     username: str
-    password: str
+    hashed_password: str
+    name: Optional[str] = None
+    age: Optional[int] = None
+    email: Optional[str] = None
+    role: Optional[str] = "user"
 
 @router.post("/register")
 def register(register_data: LoginRequest):
