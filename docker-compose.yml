@@ -1,0 +1,54 @@
+services:
+  auth-service:
+    build:
+      context: .
+      dockerfile: auth_folder/Dockerfile
+    ports:
+      - "8001:8001"
+    networks:
+      - auth-network
+
+  backend-service:
+    build:
+      context: .
+      dockerfile: backend_folder/Dockerfile
+    ports:
+      - "8000:8000"
+    networks:
+      - auth-network
+
+  query-service:
+    build:
+      context: .
+      dockerfile: query_folder/Dockerfile
+    ports:
+      - "8003:8003"
+    volumes:
+      - ./query_service:/app/query_service
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/auth_db
+    depends_on:
+      - db
+    networks:
+      - auth-network
+
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=auth_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - auth-network
+
+networks:
+  auth-network:
+    driver: bridge
+
+volumes:
+  postgres_data: 

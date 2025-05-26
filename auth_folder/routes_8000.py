@@ -6,7 +6,7 @@ import httpx
 import logging
 
 # импорты из файлов
-import auth_folder.config as c
+import config as c
 # from middleware_auth import redis_client
 # from middleware_auth import validate_creds
 router = APIRouter()
