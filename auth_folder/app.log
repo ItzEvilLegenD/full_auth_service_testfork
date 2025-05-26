@@ -1458,3 +1458,9 @@ Traceback (most recent call last):
     version = _bcrypt.__about__.__version__
               ^^^^^^^^^^^^^^^^^
 AttributeError: module 'bcrypt' has no attribute '__about__'
+24-May 00:07:51 - (trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "D:\вуз\3 курс 6 сем\Практика ГосНИИАС\full_auth_service_testfork-feature\.venv\Lib\site-packages\passlib\handlers\bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+              ^^^^^^^^^^^^^^^^^
+AttributeError: module 'bcrypt' has no attribute '__about__'
