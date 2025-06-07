@@ -14,7 +14,11 @@ app = FastAPI()
 # Прописать exception errors например httpx.ConnectError: All connection attempts failed
 
 # Конфигурация (в docker работать не будет, нужен файл с конфигурацией .env)
+<<<<<<< HEAD
 POSTGRES_SERVICE_URL = "http://localhost:8003"  # URL Postgres-сервиса
+=======
+POSTGRES_SERVICE_URL = "http://query-service-masha:8003"  # URL Postgres-сервиса
+>>>>>>> e63762016793bb5f6c1f6dfa4dd4c5f71ebd26ba
 
 # Модель данных
 class UserCreate(BaseModel):
