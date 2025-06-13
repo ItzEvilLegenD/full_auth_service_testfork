@@ -30,7 +30,10 @@ async def register(user_data: query_schemas.UserCreate, db: AsyncSession = Depen
     del user_dict["password"]  
     user_obj = User(**user_dict)
     created_user = await query_crud.create_user(db=db, user=user_obj)
-    return {"message": "User created successfully"}
+    return JSONResponse(
+        content={"message": "User created successfully"},
+        status_code=201
+    )
 
 @router.post("/signin", status_code=200)
 async def signin(user_data: LoginRequest, db: AsyncSession = Depends(get_db_session)):
